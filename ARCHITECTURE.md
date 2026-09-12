@@ -44,8 +44,13 @@ way.
 4. Export `KH_FEATURE_USER_MANAGEMENT_ADMIN` and `KH_FEATURE_USER_MANAGEMENT_PASSWORD` from the
    wrapper's own variables, and re-export the four refused settings at their safe values so a later
    change cannot reach the application.
-5. `exec` the application. kotaemon builds its interface, and the administrator is created during
-   that build, before the listener accepts anything.
+5. Start the application and supervise it. kotaemon builds its interface, and the administrator is
+   created during that build, before the listener accepts anything.
+
+The application is supervised rather than `exec`-ed for one reason: Gradio does not unwind on
+SIGTERM within the time a container runtime allows, so an `exec`-ed process is SIGKILLed and every
+ordinary stop is recorded as exit 137. The entrypoint forwards the signal, waits
+`STOP_GRACE_SECONDS` (15 by default), then stops it outright and exits 0.
 
 Step 5 is upstream's own default path from `launch.sh`, minus one line: `launch.sh` starts
 `ollama serve` first, and the `lite` image ships no ollama, so that line only writes "not found"

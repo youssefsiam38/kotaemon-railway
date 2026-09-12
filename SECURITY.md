@@ -46,12 +46,17 @@ rather than warning.
 
 kotaemon gates its interface by **visibility**: `toggle_login_visibility` in `libs/ktem/ktem/main.py`
 shows the chat, file and resource tabs only once a session holds a `user_id`. That is a client-side
-consequence of server-side state, not an HTTP-layer check on each request, so the application's
-Gradio event endpoints exist whether or not a caller has signed in.
+consequence of server-side state, not an HTTP-layer check on each request, so two things follow.
 
-In practice a caller without a session gets the default state, which is `None` when user management
-is on, and the handlers that matter do their work against that user. This wrapper does not change
-any of it, and it is worth knowing about if your corpus is sensitive:
+First, **the interface definition is public**. Gradio serves the whole Blocks tree to every visitor,
+so the names of every tab and control are in the page whether or not anyone has signed in. Labels,
+not data. `tests/smoke.sh` asserts this rather than pretending otherwise.
+
+Second, the event endpoints exist whether or not a caller has signed in. In practice a caller
+without a session gets the default state, which is `None` when user management is on, and the
+handlers that matter do their work against that user; an unauthenticated event call is refused, and
+a test asserts that too. This wrapper does not change any of it, and it is worth knowing about if
+your corpus is sensitive:
 
 - Put the service behind Railway's own access controls, or on a private network, if the documents
   are confidential.

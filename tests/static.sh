@@ -50,6 +50,14 @@ assert_contains "refuses demo mode" 'KH_DEMO_MODE=true launches the public demo 
 assert_contains "refuses the public gradio tunnel" 'gradio.live tunnel' "$ep"
 assert_contains "refuses SSO mode" 'KH_SSO_ENABLED=true starts a different application' "$ep"
 assert_contains "forces the settings it validated" 'export KH_FEATURE_USER_MANAGEMENT=true' "$ep"
+# Gradio ignores SIGTERM for longer than a container runtime waits, so the entrypoint supervises it
+# rather than exec-ing it; `exec` here would make every stop a SIGKILL and exit 137.
+if grep -q '^exec .venv/bin/python' scripts/entrypoint.sh; then
+  fail "the application is exec-ed; a stop would be reported as a crash"
+else
+  pass "the application is supervised so a stop exits cleanly"
+fi
+assert_contains "a stop signal is forwarded" 'trap term TERM INT' "$ep"
 # Railway colours a log line by the stream it arrived on, so routine start-up messages written to
 # stderr are shown to the deployer as errors.
 if grep -q '^log()' scripts/entrypoint.sh && ! grep '^log()' scripts/entrypoint.sh | grep -q '>&2'; then

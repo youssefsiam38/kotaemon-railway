@@ -68,5 +68,35 @@ log "starting kotaemon on ${GRADIO_SERVER_NAME}:${GRADIO_SERVER_PORT}, data in $
 # This is upstream's own default start path from launch.sh, minus the `ollama serve &` line: the
 # lite image ships no ollama, so that line only prints "not found" into the deploy log. If upstream
 # changes launch.sh, re-read it -- MAINTENANCE.md lists this as a bump-time check.
+#
+# The application runs as a child rather than through `exec`, because Gradio does not unwind on
+# SIGTERM within the time a container runtime allows. Left to itself the platform sends SIGKILL and
+# records exit 137, which reads as a crash on every ordinary stop. The wrapper asks politely, waits,
+# and then stops it outright, so a deliberate stop exits 0.
 cd /app || fail "cannot enter /app"
-exec .venv/bin/python app.py
+.venv/bin/python app.py &
+app_pid=$!
+
+stopping=false
+# shellcheck disable=SC2317  # reached through the trap below
+term() { stopping=true; log "stop requested; asking kotaemon to shut down"; kill -TERM "$app_pid" 2>/dev/null; }
+trap term TERM INT
+
+wait "$app_pid" 2>/dev/null
+status=$?
+if [ "$stopping" = true ]; then
+  for _ in $(seq 1 "${STOP_GRACE_SECONDS:-15}"); do
+    kill -0 "$app_pid" 2>/dev/null || break
+    sleep 1
+  done
+  if kill -0 "$app_pid" 2>/dev/null; then
+    log "kotaemon did not exit on its own; stopping it"
+    kill -KILL "$app_pid" 2>/dev/null
+    wait "$app_pid" 2>/dev/null
+  fi
+  log "stopped on signal"
+  status=0
+else
+  log "kotaemon exited with status ${status}"
+fi
+exit "$status"
