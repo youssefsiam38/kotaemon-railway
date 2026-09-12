@@ -6,7 +6,7 @@ The published template. Reproduce it from this file if it ever has to be rebuilt
 |---|---|
 | Name | kotaemon |
 | Code | `kotaemon` |
-| Template id | _filled in at publication_ |
+| Template id | `e4438db6-80cb-4344-8bc1-d15f885c38e5` |
 | Deploy URL | https://railway.com/deploy/kotaemon |
 | Category | AI/ML |
 | Image | `ghcr.io/youssefsiam38/kotaemon-railway:<version>` |
@@ -29,6 +29,7 @@ The published template. Reproduce it from this file if it ever has to be rebuilt
 |---|---|
 | `KOTAEMON_ADMIN_USERNAME` | `admin` |
 | `KOTAEMON_ADMIN_PASSWORD` | `${{secret(24)}}` |
+| `RAILWAY_HEALTHCHECK_TIMEOUT_SEC` | `600` |
 | `PORT` | `7860` |
 | `TZ` | `UTC` |
 
@@ -40,8 +41,10 @@ The published template. Reproduce it from this file if it ever has to be rebuilt
   very first deployment. It is, because the template generates it.
 - **The healthcheck path is `/`.** kotaemon serves its login page there unauthenticated, and there
   is no separate health endpoint.
-- **The healthcheck timeout has to be generous.** Importing the retrieval stack takes tens of
-  seconds on a cold container.
+- **The healthcheck timeout is raised with a variable, not a template field.** A generated template
+  carries `healthcheckPath` but no timeout, so the template sets
+  `RAILWAY_HEALTHCHECK_TIMEOUT_SEC=600`. Importing the retrieval stack takes tens of seconds on a
+  cold container, and the image itself is large to pull.
 - **`PORT` and the domain's target port must match.** Railway runs its healthcheck against the value
   of `PORT`, defaulting to 8080. The entrypoint copies `PORT` into `GRADIO_SERVER_PORT`, which is
   what the application actually reads.
