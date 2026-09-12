@@ -1,0 +1,25 @@
+# Local test topology. Mirrors the Railway deployment: one public service, one volume.
+name: kotaemon-railway-test
+
+services:
+  kotaemon:
+    # Built from this repository. CI and the Railway template use the published GHCR image instead.
+    build:
+      context: .
+      args:
+        WRAPPER_VERSION: ${WRAPPER_VERSION:-0.0.0-local}
+        VCS_REF: ${VCS_REF:-local}
+    image: ${KOTAEMON_RAILWAY_IMAGE:-kotaemon-railway:local}
+    restart: unless-stopped
+    environment:
+      PORT: '7860'
+      KOTAEMON_ADMIN_USERNAME: admin
+      KOTAEMON_ADMIN_PASSWORD: local-test-only-kotaemon-password
+      TZ: UTC
+    volumes:
+      - appdata:/app/ktem_app_data
+    ports:
+      - '127.0.0.1:7860:7860'
+
+volumes:
+  appdata:
